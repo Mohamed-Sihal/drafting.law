@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f7f5">
+  <title>DraftDesk — Indian legal drafting workspace</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1d2925;
+      --muted: #74817b;
+      --line: #e6eae7;
+      --paper: #fff;
+      --canvas: #f6f7f5;
+      --green: #17684f;
+      --green-dark: #10513d;
+      --green-pale: #eaf4ef;
+      --gold: #a5712b;
+      --gold-pale: #fbf3e7;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; background: var(--canvas); color: var(--ink); }
+    button, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    .app { display: grid; grid-template-columns: 248px minmax(0, 1fr); min-height: 100vh; }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 25px;
+      padding: 23px 15px 16px;
+      background: #fbfcfa;
+      border-right: 1px solid var(--line);
+    }
+    .brand { display: flex; align-items: center; gap: 10px; padding: 0 7px; }
+    .brand-mark {
+      display: grid;
+      width: 34px;
+      height: 34px;
+      place-items: center;
+      border-radius: 11px;
+      background: var(--green);
+      color: #fff;
+      font-family: Georgia, serif;
+      font-size: 19px;
+      font-weight: 700;
+    }
+    .brand-name { font-family: Georgia, "Times New Roman", serif; font-size: 18px; font-weight: 700; letter-spacing: -.3px; }
+    .brand-caption { margin-top: 2px; color: var(--muted); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+    .new-draft {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 41px;
+      border: 1px solid #d6e4dc;
+      border-radius: 9px;
+      background: #fff;
+      color: var(--green-dark);
+      font-size: 13px;
+      font-weight: 650;
+    }
+    .new-draft:hover { background: var(--green-pale); }
+    .side-label { margin: 0 8px 8px; color: #87918c; font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+    .matter-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 9px; background: #f1f3f1; }
+    .matter-switch button { padding: 8px 3px; border: 0; border-radius: 6px; background: transparent; color: #63716a; font-size: 12px; }
+    .matter-switch button[aria-pressed="true"] { background: #fff; color: var(--green-dark); box-shadow: 0 1px 3px #16291e12; font-weight: 650; }
+    .nav-group { display: grid; gap: 3px; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border: 0; border-radius: 8px; background: transparent; color: #59665f; text-align: left; font-size: 12px; }
+    .nav-item:hover, .nav-item.active { background: var(--green-pale); color: var(--green-dark); }
+    .nav-icon { width: 17px; color: #7a8981; text-align: center; }
+    .side-spacer { flex: 1; }
+    .privacy-card { padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+    .privacy-title { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; font-size: 11px; font-weight: 700; }
+    .privacy-copy { color: var(--muted); font-size: 10px; line-height: 1.5; }
+    .profile { display: flex; align-items: center; gap: 9px; padding: 11px 5px 0; border-top: 1px solid var(--line); }
+    .avatar { display: grid; width: 29px; height: 29px; place-items: center; border-radius: 50%; background: #e8eee9; color: var(--green-dark); font-size: 11px; font-weight: 700; }
+    .profile-name { font-size: 11px; font-weight: 650; }
+    .profile-role { margin-top: 2px; color: var(--muted); font-size: 10px; }
+
+    .main { display: flex; min-width: 0; flex-direction: column; }
+    .topbar { display: flex; min-height: 61px; align-items: center; justify-content: space-between; gap: 16px; padding: 0 28px; border-bottom: 1px solid var(--line); background: #fbfcfa; }
+    .breadcrumb { color: var(--muted); font-size: 12px; }
+    .breadcrumb strong { color: var(--ink); font-weight: 650; }
+    .prototype-badge { display: flex; align-items: center; gap: 7px; padding: 6px 9px; border: 1px solid #eedcbd; border-radius: 99px; background: var(--gold-pale); color: #8e6327; font-size: 10px; font-weight: 650; }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: #c28a37; }
+    .workspace { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 24px; width: min(1120px, 100%); margin: 0 auto; padding: 43px 28px 30px; }
+    .draft-area { min-width: 0; }
+    .eyebrow { color: var(--green); font-size: 10px; font-weight: 750; letter-spacing: .13em; text-transform: uppercase; }
+    h1 { margin: 10px 0 8px; font-family: Georgia, "Times New Roman", serif; font-size: clamp(26px, 3vw, 35px); font-weight: 500; letter-spacing: -.75px; }
+    .intro { max-width: 620px; margin: 0; color: #69766f; font-size: 13px; line-height: 1.65; }
+    .case-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 26px; }
+    .field-label { display: block; margin-bottom: 7px; color: #56645c; font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+    .select-wrap { position: relative; }
+    select {
+      width: 100%;
+      min-height: 39px;
+      appearance: none;
+      padding: 0 33px 0 11px;
+      border: 1px solid #dfe5e1;
+      border-radius: 8px;
+      outline: none;
+      background: #fff;
+      color: #334139;
+      font-size: 12px;
+    }
+    select:focus, textarea:focus { border-color: #77aa91; box-shadow: 0 0 0 3px #17684f14; }
+    .select-wrap::after { position: absolute; top: 10px; right: 12px; color: #7b8881; content: "⌄"; pointer-events: none; }
+    .conversation { display: grid; gap: 14px; margin-top: 24px; }
+    .welcome-card { padding: 17px 18px; border: 1px solid #dfe8e2; border-radius: 11px; background: #fff; }
+    .welcome-head { display: flex; align-items: center; gap: 9px; font-size: 12px; font-weight: 700; }
+    .assistant-icon { display: grid; width: 25px; height: 25px; place-items: center; border-radius: 8px; background: var(--green-pale); color: var(--green); font-family: Georgia, serif; font-weight: 700; }
+    .welcome-card p { margin: 10px 0 0 34px; color: #63716a; font-size: 12px; line-height: 1.65; }
+    .suggestions { display: flex; flex-wrap: wrap; gap: 7px; margin: 14px 0 0 34px; }
+    .suggestion { padding: 7px 10px; border: 1px solid #e1e8e3; border-radius: 99px; background: #fff; color: #4a6557; font-size: 10px; }
+    .suggestion:hover { border-color: #b7d1c1; background: #f7fbf8; }
+    .message-list { display: grid; gap: 12px; }
+    .user-message { justify-self: end; max-width: 85%; padding: 11px 14px; border-radius: 12px 12px 3px 12px; background: #eaf2ed; color: #31483b; font-size: 12px; line-height: 1.55; white-space: pre-wrap; }
+    .draft-card { padding: 17px; border: 1px solid var(--line); border-radius: 11px; background: #fff; }
+    .draft-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .draft-title { font-family: Georgia, serif; font-size: 17px; }
+    .draft-subtitle { margin-top: 5px; color: var(--muted); font-size: 10px; }
+    .draft-state { padding: 5px 8px; border-radius: 99px; background: var(--gold-pale); color: #8e6327; font-size: 9px; font-weight: 700; white-space: nowrap; }
+    .draft-warning { margin: 15px 0; padding: 10px 11px; border-left: 3px solid #c38a37; background: #fffaf1; color: #765d37; font-size: 10px; line-height: 1.5; }
+    .outline { display: grid; gap: 9px; margin: 0; padding: 0; list-style: none; }
+    .outline li { display: flex; gap: 10px; color: #57645d; font-size: 11px; line-height: 1.45; }
+    .outline-number { color: #8d9992; font-variant-numeric: tabular-nums; }
+    .draft-actions { display: flex; gap: 8px; margin-top: 16px; }
+    .small-button { padding: 7px 10px; border: 1px solid var(--line); border-radius: 7px; background: #fff; color: #53625a; font-size: 10px; }
+    .small-button:hover { background: #f7f9f7; }
+    .composer { margin-top: 16px; padding: 10px; border: 1px solid #dfe5e1; border-radius: 11px; background: #fff; box-shadow: 0 5px 20px #24372d08; }
+    textarea { display: block; width: 100%; min-height: 75px; resize: vertical; padding: 7px 7px 10px; border: 0; outline: none; background: transparent; color: var(--ink); font-size: 12px; line-height: 1.5; }
+    textarea:focus { border: 0; box-shadow: none; }
+    .composer-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 8px; border-top: 1px solid #f0f2f0; }
+    .composer-hint { color: #8a958e; font-size: 9px; }
+    .send-button { display: flex; align-items: center; gap: 7px; padding: 8px 13px; border: 0; border-radius: 7px; background: var(--green); color: #fff; font-size: 10px; font-weight: 650; }
+    .send-button:hover { background: var(--green-dark); }
+    .side-panel { padding-top: 4px; }
+    .panel-card { margin-bottom: 13px; padding: 15px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+    .panel-title { display: flex; align-items: center; justify-content: space-between; gap: 9px; margin-bottom: 11px; font-size: 11px; font-weight: 750; }
+    .panel-count { padding: 3px 6px; border-radius: 99px; background: #f0f2f0; color: #78847d; font-size: 9px; font-weight: 600; }
+    .citation-empty { padding: 12px 10px; border: 1px dashed #dfe5e1; border-radius: 8px; color: #77847c; text-align: center; font-size: 10px; line-height: 1.55; }
+    .source-list { display: grid; gap: 9px; }
+    .source-item { display: flex; align-items: flex-start; gap: 8px; color: #516158; font-size: 10px; line-height: 1.45; }
+    .source-check { color: var(--green); font-size: 12px; font-weight: 800; }
+    .source-item a { color: inherit; text-decoration-color: #bdc9c1; text-underline-offset: 2px; }
+    .source-note { margin: 12px 0 0; color: #87928c; font-size: 9px; line-height: 1.55; }
+    .workflow-list { display: grid; gap: 10px; }
+    .workflow-step { display: flex; align-items: flex-start; gap: 9px; color: #6a776f; font-size: 10px; line-height: 1.45; }
+    .step-number { display: grid; width: 17px; height: 17px; flex: 0 0 17px; place-items: center; border-radius: 50%; background: #eef4f0; color: var(--green); font-size: 9px; font-weight: 700; }
+    .footer-note { margin: auto 0 0; padding: 10px 0 0; color: #95a099; font-size: 9px; line-height: 1.55; }
+    .toast { position: fixed; right: 20px; bottom: 20px; z-index: 3; padding: 10px 14px; border-radius: 8px; background: #223b30; color: #fff; box-shadow: 0 8px 25px #10271d26; font-size: 11px; opacity: 0; transform: translateY(8px); transition: .2s ease; pointer-events: none; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 900px) {
+      .workspace { grid-template-columns: minmax(0, 1fr); max-width: 720px; padding-top: 30px; }
+      .side-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .panel-card { margin: 0; }
+      .footer-note { grid-column: 1 / -1; }
+    }
+    @media (max-width: 620px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 11px; padding: 12px 14px; border-right: 0; border-bottom: 1px solid var(--line); }
+      .brand { padding: 0; }
+      .brand-caption, .side-label, .nav-group, .side-spacer, .privacy-card, .profile { display: none; }
+      .new-draft { grid-column: 2; grid-row: 1; padding: 0 12px; }
+      .matter-switch { grid-column: 1 / -1; grid-row: 2; }
+      .topbar { min-height: 49px; padding: 0 15px; }
+      .workspace { padding: 26px 15px 22px; }
+      .case-row { grid-template-columns: 1fr; gap: 10px; margin-top: 20px; }
+      .side-panel { grid-template-columns: 1fr; }
+      .footer-note { grid-column: auto; }
+      .suggestions { margin-left: 0; }
+      .welcome-card p { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" aria-label="Workspace navigation">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">D</div>
+        <div>
+          <div class="brand-name">DraftDesk</div>
+          <div class="brand-caption">Indian law workspace</div>
+        </div>
+      </div>
+      <button class="new-draft" id="newDraft" type="button"><span aria-hidden="true">＋</span> New draft</button>
+      <div>
+        <p class="side-label">Practice area</p>
+        <div class="matter-switch" role="group" aria-label="Choose practice area">
+          <button type="button" data-matter="family" aria-pressed="true">Family</button>
+          <button type="button" data-matter="drt" aria-pressed="false">DRT</button>
+        </div>
+      </div>
+      <nav class="nav-group" aria-label="Draft categories">
+        <button class="nav-item active" type="button"><span class="nav-icon" aria-hidden="true">✦</span>Draft workspace</button>
+        <button class="nav-item" type="button" id="sourceNav"><span class="nav-icon" aria-hidden="true">◇</span>Source library</button>
+        <button class="nav-item" type="button" id="historyNav"><span class="nav-icon" aria-hidden="true">◷</span>Recent drafts</button>
+      </nav>
+      <div class="side-spacer"></div>
+      <div class="privacy-card">
+        <div class="privacy-title"><span aria-hidden="true">▣</span> Private by design</div>
+        <div class="privacy-copy">This prototype keeps your input in this browser session. Avoid entering identifying client details.</div>
+      </div>
+      <div class="profile">
+        <div class="avatar" aria-hidden="true">LA</div>
+        <div><div class="profile-name">Lawyer workspace</div><div class="profile-role">Drafts stay under your review</div></div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="breadcrumb">Workspace <span aria-hidden="true">/</span> <strong id="breadcrumbMatter">Family law</strong></div>
+        <div class="prototype-badge"><span class="dot" aria-hidden="true"></span>Prototype · source verification not connected</div>
+      </header>
+      <div class="workspace">
+        <section class="draft-area" aria-labelledby="pageTitle">
+          <div class="eyebrow">Indian legal drafting</div>
+          <h1 id="pageTitle">A thoughtful first draft, built with you.</h1>
+          <p class="intro">Describe the matter and the document you need. DraftDesk can help organize a lawyer-reviewed draft; legal propositions must be supported by approved Indian sources before use.</p>
+
+          <div class="case-row">
+            <label>
+              <span class="field-label">Matter type</span>
+              <span class="select-wrap"><select id="matterType" aria-label="Matter type"></select></span>
+            </label>
+            <label>
+              <span class="field-label">Document to prepare</span>
+              <span class="select-wrap"><select id="documentType" aria-label="Document to prepare"></select></span>
+            </label>
+          </div>
+
+          <div class="conversation" aria-live="polite">
+            <div class="welcome-card" id="welcomeCard">
+              <div class="welcome-head"><span class="assistant-icon" aria-hidden="true">D</span> Your drafting assistant</div>
+              <p>Start with the facts, the relief sought, and any procedural context. Use placeholders instead of names or other identifying details in this demo.</p>
+              <div class="suggestions" id="suggestions"></div>
+            </div>
+            <div class="message-list" id="messageList"></div>
+          </div>
+
+          <form class="composer" id="draftForm">
+            <label class="sr-only" for="prompt">Describe the facts or drafting changes</label>
+            <textarea id="prompt" placeholder="Describe the matter, key dates, relevant documents, and relief sought…" required></textarea>
+            <div class="composer-footer">
+              <span class="composer-hint">Use placeholders for sensitive details · Nothing is sent to a server</span>
+              <button class="send-button" type="submit">Create outline <span aria-hidden="true">↗</span></button>
+            </div>
+          </form>
+        </section>
+
+        <aside class="side-panel" aria-label="Sources and drafting workflow">
+          <section class="panel-card">
+            <div class="panel-title">Citations <span class="panel-count" id="citationCount">0 verified</span></div>
+            <div class="citation-empty" id="citationStatus">No sources have been retrieved. This prototype does not generate or verify legal citations.</div>
+          </section>
+          <section class="panel-card">
+            <div class="panel-title">Approved-source policy</div>
+            <div class="source-list">
+              <div class="source-item"><span class="source-check" aria-hidden="true">✓</span><span><a href="https://www.indiacode.nic.in/" target="_blank" rel="noopener noreferrer">India Code</a> — central Acts and legislation</span></div>
+              <div class="source-item"><span class="source-check" aria-hidden="true">✓</span><span><a href="https://egazette.gov.in/" target="_blank" rel="noopener noreferrer">e-Gazette of India</a> — official Gazette publications</span></div>
+              <div class="source-item"><span class="source-check" aria-hidden="true">✓</span><span><a href="https://www.sci.gov.in/" target="_blank" rel="noopener noreferrer">Supreme Court of India</a> — official court materials</span></div>
+              <div class="source-item"><span class="source-check" aria-hidden="true">✓</span><span>Relevant official High Court, Family Court, DRT/DRAT rules and portals</span></div>
+            </div>
+            <p class="source-note">Only Indian official sources are in scope. Every authority must be checked for applicability, amendments, and the relevant date.</p>
+          </section>
+          <section class="panel-card">
+            <div class="panel-title">Review before use</div>
+            <div class="workflow-list">
+              <div class="workflow-step"><span class="step-number">1</span><span>Confirm jurisdiction, applicable law, and procedural rules.</span></div>
+              <div class="workflow-step"><span class="step-number">2</span><span>Verify each citation against its official source.</span></div>
+              <div class="workflow-step"><span class="step-number">3</span><span>Review facts, relief, and final draft as counsel.</span></div>
+            </div>
+          </section>
+          <p class="footer-note">DraftDesk is a drafting aid, not legal advice. This demo creates an outline only and does not connect to an AI model or legal database.</p>
+        </aside>
+      </div>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (function () {
+      const matterTypes = {
+        family: [
+          ["divorce", "Divorce / matrimonial"],
+          ["maintenance", "Maintenance"],
+          ["custody", "Child custody / guardianship"],
+          ["family-other", "Other family matter"]
+        ],
+        drt: [
+          ["original-application", "Debt recovery application"],
+          ["securitisation", "Securitisation challenge"],
+          ["reply", "Reply / objections"],
+          ["drt-other", "Other DRT matter"]
+        ]
+      };
+      const documents = {
+        family: ["Petition / application", "Reply / response", "Affidavit", "Legal notice"],
+        drt: ["Original application", "Securitisation application", "Reply / objections", "Interlocutory application"]
+      };
+      const prompts = {
+        family: ["Organize a case chronology", "Prepare a petition outline", "List missing facts and documents"],
+        drt: ["Organize the loan and notice chronology", "Prepare an application outline", "List supporting documents to review"]
+      };
+      const outlines = {
+        family: [
+          "Court and jurisdiction details for counsel to confirm",
+          "Parties and relationship, using placeholders",
+          "Chronology of material facts and relevant documents",
+          "Applicable legal framework and verified authorities (to be supplied)",
+          "Relief requested and any interim relief",
+          "List of documents, verification, and annexures"
+        ],
+        drt: [
+          "Tribunal and jurisdiction details for counsel to confirm",
+          "Parties and capacity, using placeholders",
+          "Account, transaction, and notice chronology",
+          "Applicable legal framework and verified authorities (to be supplied)",
+          "Relief or response sought",
+          "Supporting documents, verification, and annexures"
+        ]
+      };
+      const matterSelect = document.getElementById("matterType");
+      const documentSelect = document.getElementById("documentType");
+      const promptInput = document.getElementById("prompt");
+      const messageList = document.getElementById("messageList");
+      const toast = document.getElementById("toast");
+      let activeMatter = "family";
+      let toastTimer;
+
+      function fillSelect(select, items) {
+        select.replaceChildren();
+        items.forEach(function (item) {
+          const option = document.createElement("option");
+          const pairedItem = Array.isArray(item);
+          option.value = pairedItem ? item[0] : item;
+          option.textContent = pairedItem ? item[1] : item;
+          select.appendChild(option);
+        });
+      }
+
+      function refreshMatter() {
+        fillSelect(matterSelect, matterTypes[activeMatter]);
+        fillSelect(documentSelect, documents[activeMatter]);
+        document.getElementById("breadcrumbMatter").textContent = activeMatter === "family" ? "Family law" : "DRT";
+        document.getElementById("suggestions").replaceChildren();
+        prompts[activeMatter].forEach(function (text) {
+          const button = document.createElement("button");
+          button.className = "suggestion";
+          button.type = "button";
+          button.textContent = text;
+          button.addEventListener("click", function () { promptInput.value = text; promptInput.focus(); });
+          document.getElementById("suggestions").appendChild(button);
+        });
+        document.querySelectorAll("[data-matter]").forEach(function (button) {
+          button.setAttribute("aria-pressed", String(button.dataset.matter === activeMatter));
+        });
+      }
+
+      function showToast(message) {
+        toast.textContent = message;
+        toast.classList.add("show");
+        window.clearTimeout(toastTimer);
+        toastTimer = window.setTimeout(function () { toast.classList.remove("show"); }, 2400);
+      }
+
+      function createDraft(text) {
+        const userMessage = document.createElement("div");
+        userMessage.className = "user-message";
+        userMessage.textContent = text;
+        messageList.appendChild(userMessage);
+
+        const card = document.createElement("article");
+        card.className = "draft-card";
+        const heading = document.createElement("div");
+        heading.className = "draft-card-head";
+        const titleGroup = document.createElement("div");
+        const title = document.createElement("div");
+        title.className = "draft-title";
+        title.textContent = documentSelect.options[documentSelect.selectedIndex].textContent + " outline";
+        const subtitle = document.createElement("div");
+        subtitle.className = "draft-subtitle";
+        subtitle.textContent = matterSelect.options[matterSelect.selectedIndex].textContent + " · Working outline";
+        titleGroup.append(title, subtitle);
+        const state = document.createElement("span");
+        state.className = "draft-state";
+        state.textContent = "Needs lawyer review";
+        heading.append(titleGroup, state);
+
+        const warning = document.createElement("div");
+        warning.className = "draft-warning";
+        warning.textContent = "Outline only. No legal analysis or citations were generated. Add and verify applicable authorities from official Indian sources before drafting legal propositions.";
+        const list = document.createElement("ol");
+        list.className = "outline";
+        outlines[activeMatter].forEach(function (section, index) {
+          const item = document.createElement("li");
+          const number = document.createElement("span");
+          number.className = "outline-number";
+          number.textContent = String(index + 1).padStart(2, "0");
+          const textNode = document.createElement("span");
+          textNode.textContent = section;
+          item.append(number, textNode);
+          list.appendChild(item);
+        });
+        const actions = document.createElement("div");
+        actions.className = "draft-actions";
+        const copy = document.createElement("button");
+        copy.className = "small-button";
+        copy.type = "button";
+        copy.textContent = "Copy outline";
+        copy.addEventListener("click", function () {
+          const content = title.textContent + "\n\n" + outlines[activeMatter].map(function (line, i) { return (i + 1) + ". " + line; }).join("\n");
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(content).then(function () { showToast("Outline copied"); }).catch(function () { showToast("Clipboard unavailable in this browser"); });
+          } else {
+            showToast("Clipboard unavailable in this browser");
+          }
+        });
+        actions.appendChild(copy);
+        card.append(heading, warning, list, actions);
+        messageList.appendChild(card);
+        card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+
+      document.querySelectorAll("[data-matter]").forEach(function (button) {
+        button.addEventListener("click", function () {
+          activeMatter = button.dataset.matter;
+          refreshMatter();
+        });
+      });
+
+      document.getElementById("draftForm").addEventListener("submit", function (event) {
+        event.preventDefault();
+        const text = promptInput.value.trim();
+        if (!text) return;
+        createDraft(text);
+        promptInput.value = "";
+      });
+
+      document.getElementById("newDraft").addEventListener("click", function () {
+        messageList.replaceChildren();
+        promptInput.value = "";
+        promptInput.focus();
+        showToast("Started a new draft");
+      });
+      document.getElementById("sourceNav").addEventListener("click", function () {
+        document.querySelector(".side-panel").scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+      document.getElementById("historyNav").addEventListener("click", function () {
+        showToast("Draft history is not enabled in this prototype");
+      });
+
+      refreshMatter();
+    }());
+  </script>
+  <style>
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; clip-path: inset(50%); border: 0; }
+  </style>
+</body>
+</html>
